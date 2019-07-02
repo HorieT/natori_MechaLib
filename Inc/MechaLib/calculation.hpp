@@ -50,9 +50,9 @@ struct coordinate{
 	 * 第一引数:取得ベクトル
 	 */
 	template<class V>
-	void get_vector(V& vec) const{
-		vec.x() = x;
-		vec.y() = y;
+	inline void get_vector(V& vector) const{
+		vector.x() = x;
+		vector.y() = y;
 	}
 	/*
 	 * 原点からの距離算出関数
@@ -168,15 +168,17 @@ protected:
 	float _P_gain;
 	float _I_gain;
 	float _D_gain;
+
+	T _limit;
 public:
 	/*
 	 * コンストラクタ
 	 * */
-	PID(T* value, float P_gain = 0.0f, float I_gain = 0.0f, float D_gain = 0.0f)
-	: _value(value), _make_value_flag(false), _P_gain(P_gain), _I_gain(I_gain), _D_gain(D_gain){}
+	PID(T* value, float P_gain = 0.0f, float I_gain = 0.0f, float D_gain = 0.0f, T limit = static_cast<T>(0))
+	: _value(value), _make_value_flag(false), _P_gain(P_gain), _I_gain(I_gain), _D_gain(D_gain),_limit(limit){}
 
-	PID(float P_gain = 0.0f, float I_gain = 0.0f, float D_gain = 0.0f)
-	: _value(new T((T)0)), _make_value_flag(true), _P_gain(P_gain), _I_gain(I_gain), _D_gain(D_gain){}
+	PID(float P_gain = 0.0f, float I_gain = 0.0f, float D_gain = 0.0f, T limit = static_cast<T>(0))
+	: _value(new T(0)), _make_value_flag(true), _P_gain(P_gain), _I_gain(I_gain), _D_gain(D_gain),_limit(limit){}
 	//コピー禁止
 	PID(const PID<T>& pid) = delete;
 	PID& operator=(const PID<T>& pid) = delete;
@@ -192,12 +194,17 @@ public:
 	/*
 	 * ゲイン変更
 	 */
-	void chage_gaine(float P_gain = 0.0f, float I_gain = 0.0f, float D_gain = 0.0f){
+	inline void chage_gaine(float P_gain = 0.0f, float I_gain = 0.0f, float D_gain = 0.0f){
 		*_value = T{0};
 
 		_P_gain = P_gain;
 		_I_gain = I_gain;
 		_D_gain = D_gain;
+	}
+	inline void chage_limit(T limit){
+		*_value = T{0};
+
+		_limit = limit;
 	}
 
 	/*
@@ -211,6 +218,8 @@ public:
 				_P_gain * (_deviation[0] - _deviation[1]) +
 				_I_gain * static_cast<float>(ms) * (_deviation[0]) +
 				_D_gain / static_cast<float>(ms) * (_deviation[0] - 2 * _deviation[1] + _deviation[2]);
+
+		if((_limit != static_cast<T>(0)) && (std::abs(*_value) > _limit))*_value = (*_value > 0) ? _limit : -_limit;
 	}
 
 

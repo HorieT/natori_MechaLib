@@ -6,12 +6,14 @@
 #include "MechaLib/calculation.hpp"
 #include "MechaLib/sys_timer.hpp"
 #include "MechaLib/posEstimation.hpp"
+#include <Eigen/Geometry>
 
 
 namespace Mecha{
 
 /*
  * 足回り基底クラス
+ * 全方向移動マシンにのみ適用
  */
 class chassis{
 protected:
@@ -37,6 +39,8 @@ protected:
 	float _target_vel_rot_rps = 0.0f;// rad/s
 	//(位置制御のみ)許容誤差
 	coordinate<float> _tolerance{0.0f, 0.0f, 0.0f};
+	uint32_t _in_tolerance_time = 100;
+	uint32_t _in_tolerance_count = 0;
 
 	//上限値
 	float _limit_vel_vec_mps = 0.0f;
@@ -65,8 +69,8 @@ protected:
 
 	virtual void move_set() final{
 		//入力用変数
-		/*Eigen::Vector2d input_vec_mps = {0.0, 0.0};
-		double input_rot_radps = 0.0;
+		Eigen::Vector2f input_vec_mps = {0.0, 0.0};
+		float input_rot_radps = 0.0;
 		//自己位置
 		coordinate<float> now_position = _my_position->get_pos();
 
@@ -76,9 +80,8 @@ protected:
 		[[maybe_unused]] coordinate<float> now_vel = _my_position->get_vel();
 		coordinate<float> def_pos;
 		Eigen::Vector2f swap_vec(0.0f, 0.0f);
-		Eigen::Matrix2f rot;
-		rot << cosf(-now_position.direction_rad), -sinf(-now_position.direction_rad),
-				sinf(-now_position.direction_rad), cosf(-now_position.direction_rad);
+
+		Eigen::Rotation2Df rotate(-now_position.direction_rad);
 
 
 		switch(_mode){
@@ -87,50 +90,76 @@ protected:
 			input_vec_mps = _target_vel_vec_mps;
 			input_rot_radps = _target_vel_rot_rps;
 			break;
-		//目標地点移動
-		case move_mode::SET_GOAL:{
-			Eigen::Vector2f position_difference = (_target_position_mm - now_position) / 1000.0f;
 
+		//目標地点収束
+		case move_mode::SET_GOAL:{
+			coordinate<float> position_difference = (_target_position_mm - now_position);
+			Eigen::Vector2f pid_vec_value(0.0f, 0.0f);
+
+			//収束判定
+			if(position_difference < _tolerance){
+				if(_in_tolerance_count > _in_tolerance_time){
+					if(_callback_func != nullptr)_callback_func();
+					_mode = move_mode::MANUAL;
+					input_vec_mps << 0.0f, 0.0f;
+					input_rot_radps = 0.0f;
+					break;
+				}
+				_in_tolerance_count += _scheduler.get_period();
+			}else{
+				_in_tolerance_count = 0;
+			}
+
+			_pid_x_direction.control(position_difference.x / 1000.0f, _scheduler.get_period());
+			_pid_y_direction.control(position_difference.y / 1000.0f, _scheduler.get_period());
+			_pid_rotaition.control(position_difference.direction_rad, _scheduler.get_period());
+
+			pid_vec_value << _pid_x_direction.get(), _pid_y_direction.get();
+			if(pid_vec_value.norm() > _limit_vel_vec_mps){
+				//頭打ち
+				pid_vec_value.normalize();
+				pid_vec_value *= _limit_vel_vec_mps;
+				_pid_x_direction.set(pid_vec_value.x());
+				_pid_y_direction.set(pid_vec_value.y());
+			}
+			input_vec_mps = rotate * pid_vec_value;
+
+			//回転はPIDクラス内で頭打ち
+			input_rot_radps = _pid_rotaition.get();
+
+
+			/*
+			//進行方向単位ベクトル
+			input_vec_mps = rotate * position_difference_vec.normalized();
 			if(std::isfinite(_acc_vec_mps2)){//有限
 				//加減速ブロック
+				if(position_difference.norm() < static_cast<float>(M_PI) * powf(_limit_vel_vec_mps, 2.0f) / (4.0f * _acc_vec_mps2)){
+					//減速
 
+				}else if(static_cast<float>(_count_acc_vec) < static_cast<float>(M_PI) * _limit_vel_vec_mps * 1000.0f / (2.0f * _acc_vec_mps2)){
+					//加速
+					input_vec_mps *= _limit_vel_vec_mps * (1.0f - cosf(2.0f * _acc_vec_mps2 * static_cast<float>(_count_acc_vec) * 0.001f / _limit_vel_vec_mps)) / 2.0f;
+				}else{
+					//最高速
+				}
+				_count_acc_vec += _scheduler.get_period();
 			}else{//無限
+
 			}
 
+			input_rot_radps = position_difference.direction_rad;
+			if(std::isfinite(_acc_rot_rps2)){
 
+			}else{
+
+			}
+			*/
 			break;
 		}
-
-
-			def_pos = ((target_goal - now_pos) / 1000.0);
-			def_pos.get_vector(swap_vec);
-
-			if(def_pos.norm() > limit_vel_vec){
-				Eigen::Vector2f box = (rot * (limit_vel_vec * swap_vec.normalized()));
-				input_vec_mps = box.cast<double>();
-			}else if(def_pos.norm() < limit_vel_vec / 100.0){
-				swap_vec *= 10.0;
-				input_vec_ｍmps = (rot * swap_vec).cast<double>();
-			}else{
-				input_vec_mps = (rot * swap_vec).cast<double>();
-			}
-
-			input_rot_radps = def_pos.direction_rad;
-			input_rot_radps = (input_rot_radps > 0) ? limit_vel_rot : -limit_vel_rot;
-
-			if(def_pos.norm() < 10.0 && def_pos.direction_rad < M_PI/20.0){
-				mode = MANUAL;
-				target_vel_vec << 0.0, 0.0;
-				target_vel_rot = 0.0;
-				if(returnFunc != nullptr)returnFunc();
-			}
-			break;
-
-
 		//線入力
 		case move_mode::SET_LINE:
 		{
-			Eigen::Vector2f catch_vec(0.0f, 0.0f), vec_buff(0.0f, 0.0f);
+			/*Eigen::Vector2f catch_vec(0.0f, 0.0f), vec_buff(0.0f, 0.0f);
 			coordinate<float> def_buff;
 			float rad_buff = 0.0f;
 			float min_def_norm = 1000000.0f;
@@ -189,8 +218,15 @@ protected:
 				input_rot_radps = 0.0;
 				input_vec_mps = Eigen::Vector2d(0.0, 0.0);
 			}
-			break;
+			break;*/
 		}
+
+
+
+
+
+
+
 		case move_mode::EMERGENCY:
 			input_vec_mps <<0.0, 0.0;
 			input_rot_radps = 0.0;
@@ -200,7 +236,7 @@ protected:
 		}
 
 		//入力部
-		input_mps(input_vec_mps, input_rot_radps);*/
+		input_mps(input_vec_mps, input_rot_radps);
 	}
 
 	virtual void input_mps(Eigen::Vector2f vector, float rotation) = 0;
@@ -245,11 +281,13 @@ public:
 		_mode = move_mode::MANUAL;
 	}
 	/*
-	 * 目標座標入力(開始時、停止時ともに速度0と定義)
+	 * 収束目標座標入力(開始時速度0と定義)
 	 */
 	void virtual set_goal(const coordinate<float>& position, float velocity_mps, float rotation_rps, const coordinate<float>& tolerance, void (*finish_callback)(void) = nullptr) final{
 		_target_vel_vec_mps << 0.0, 0.0;
 		_target_vel_rot_rps = 0.0;
+
+		/*
 		//走行距離
 		coordinate<float> position_distance = position - _my_position->get_pos();
 
@@ -264,7 +302,7 @@ public:
 							sqrtf(2.0f * _acc_vec_mps2 * position_distance.norm() / static_cast<float>(M_PI));
 
 		}else{//無限
-
+			_limit_vel_vec_mps = velocity_mps;
 		}
 		//回転ベクトル
 		if(std::isfinite(_acc_rot_rps2)){//有限
@@ -276,11 +314,17 @@ public:
 							sqrtf(2.0f * _acc_rot_rps2 * position_distance.direction_rad / static_cast<float>(M_PI));
 
 		}else{//無限
-
+			_limit_vel_rot_rps = rotation_rps;
 		}
+*/
 
+		_limit_vel_vec_mps = velocity_mps;
+		_pid_x_direction.set(0.0f);
+		_pid_y_direction.set(0.0f);
+		_limit_vel_rot_rps = rotation_rps;
+		_pid_rotaition.chage_limit(_limit_vel_rot_rps);
 
-		//_target_position_mm = position;
+		_target_position_mm = position;
 
 		_tolerance = tolerance;
 		_callback_func = finish_callback;
@@ -289,7 +333,7 @@ public:
 	/*
 	 * 経路入力
 	 */
-	void set_path(std::vector<std::pair<Eigen::Vector2f, coordinate<float>>>* l, float velocity_mps, float rotation_rps, void (*finish_callback)(void) = nullptr, double rad = INFINITY){
+	void set_path(std::vector<std::pair<Eigen::Vector2f, coordinate<float>>>* l, float velocity_mps, float rotation_rps, void (*finish_callback)(void) = nullptr, float rad = INFINITY){
 		_target_vel_vec_mps << 0.0, 0.0;
 		_target_vel_rot_rps = 0.0;
 		_target_line = l;
