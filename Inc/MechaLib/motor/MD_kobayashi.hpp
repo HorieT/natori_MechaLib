@@ -6,7 +6,6 @@
 #pragma once
 #include "MechaLib/MechaLib_HAL_global.hpp"
 #include "MechaLib/motor/motor.hpp"
-#include "MechaLib/calculation.hpp"
 #include <cstring>
 
 namespace Mecha{

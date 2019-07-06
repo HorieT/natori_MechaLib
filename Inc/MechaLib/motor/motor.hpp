@@ -5,7 +5,7 @@
  */
 #pragma once
 #include "MechaLib/sys_timer.hpp"
-#include "MechaLib/calculation.hpp"
+#include "MechaLib/Base/calculation.hpp"
 
 
 namespace Mecha{

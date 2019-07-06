@@ -1,5 +1,5 @@
 /*
- * 2019/06/23 Horie
+ * 2019/07/02 Horie
  * 計算系機能の実装
  * Eigenライブラリを使用する
  */
@@ -15,8 +15,7 @@
 /*
  * 数学定数がなぜか使えないときのため
  */
-#ifdef M_PI
-#else
+#ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
@@ -108,6 +107,11 @@ struct coordinate{
 		direction_rad /= static_cast<T>(r_operand);
 		return *this;
 	}
+
+	/*
+	 * 添え字による要素アクセス
+	 */
+	inline T& operator[](size_t index){return *(&x + index);}
 };
 
 /*以下doubleに対する特殊化*/

@@ -1,15 +1,31 @@
 /*
- * 2019/06/ Horie
+ * 2019/07/02 Horie
  */
 #pragma once
 
-#include "MechaLib/calculation.hpp"
+#include "MechaLib/Base/calculation.hpp"
 #include "MechaLib/sys_timer.hpp"
 #include "MechaLib/posEstimation.hpp"
 #include <Eigen/Geometry>
 
 
 namespace Mecha{
+
+/*
+ * ライン追従のためのラインの構造
+ */
+struct move_line{
+private:
+	struct point_data{
+		coordinate<float> point;
+		Eigen::Vector2f tangent_vector;
+		float length;
+	};
+public:
+	float all_length;
+	float num_point;
+	std::vector<point_data> point_croud;
+};
 
 /*
  * 足回り基底クラス
@@ -97,7 +113,7 @@ protected:
 			Eigen::Vector2f pid_vec_value(0.0f, 0.0f);
 
 			//収束判定
-			if(position_difference < _tolerance){
+			if((position_difference.x < _tolerance.x) && (position_difference.y < _tolerance.y) && (position_difference.direction_rad < _tolerance.direction_rad)){
 				if(_in_tolerance_count > _in_tolerance_time){
 					if(_callback_func != nullptr)_callback_func();
 					_mode = move_mode::MANUAL;
@@ -261,7 +277,7 @@ public:
 	 * 加減速設定
 	 */
 	inline virtual bool set_acc(float vector_mps2, float rotation_rps2) final{
-		if(_mode != move_mode::MANUAL || _mode != move_mode::EMERGENCY)return false;
+		if(_mode == move_mode::SET_LINE)return false;
 		_acc_vec_mps2 = fabsf(vector_mps2);
 		_acc_rot_rps2 = fabsf(rotation_rps2);
 		return true;

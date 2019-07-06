@@ -185,15 +185,15 @@ public:
 	/*
 	 * ‰Šúˆ—
 	 */
-	void init(){_scheduler.set(this);}
+	inline void init(){_scheduler.set(this);}
 
 
-	const coordinate<float>& get_pos(){return _position;}
-	const coordinate<float>& get_vel(){return _velocity;}
+	inline const coordinate<float>& get_pos(){return _position;}
+	inline const coordinate<float>& get_vel(){return _velocity;}
 
 	/*
 	 * ˆÊ’uÄ‘ã“ü
 	 */
-	void reset_pos(const coordinate<float>& position){_position = position;}
+	inline void reset_pos(const coordinate<float>& position){_position = position;}
 };
 }

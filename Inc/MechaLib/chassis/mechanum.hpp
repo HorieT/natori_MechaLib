@@ -15,7 +15,7 @@ namespace Mecha{
  * メカナムホイールクラス
  * ４輪・長方形接地前提
  */
-class mechanum : private chassis{
+class mechanum : public chassis{
 private:
 
 	std::array<DriveWheel*, 4> _wheel;//各ホイール
