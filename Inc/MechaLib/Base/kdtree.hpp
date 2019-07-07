@@ -16,6 +16,7 @@ namespace Mecha{
  */
 template<typename Key, typename Data, size_t Dim = sizeof(Key)>
 class kdtree {
+	static_assert(sizeof(Key) >= Dim, "Don't over dimension size of Key size");
 private:
 	enum class child_size : uint8_t { SMALL = 0U, LARGE = 1U };
 
@@ -92,7 +93,9 @@ private:
 		return dist;
 	}
 public:
-	kdtree() { std::iota(_axis_order.begin(), _axis_order.end(), 0); }
+	kdtree() {
+		std::iota(_axis_order.begin(), _axis_order.end(), 0);
+	}
 	~kdtree() {}
 
 	//データ配列からツリーの構築

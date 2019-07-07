@@ -8,7 +8,7 @@ namespace Mecha{
 
 class routeLine{
 public:
-	kdtree<coordinate<float>, Eigen::Vector2f, 2> route;
+	kdtree<coordinate<float>, std::pair<Eigen::Vector2f, float>, 2> route;
 	float length_mm;
 };
 }

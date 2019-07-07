@@ -15,8 +15,8 @@ namespace Mecha{
  */
 template<uint8_t T>
 class omni : private chassis{
+	static_assert(T > 1U, "Are you serious?");
 private:
-
 	std::array<DriveWheel*, T> _wheel;//各ホイール
 	const coordinate<float> _wheel_position;//ホイール位置
 	const float _wheel_length;
@@ -61,7 +61,6 @@ public:
 	　*/
 	omni(const std::array<DriveWheel*, T>& wheel, const coordinate<float>& first_wheel_point, SelfPos* my_position, uint32_t period_ms, bool polarity):
 		chassis(my_position, period_ms), _wheel(wheel), _wheel_position(first_wheel_point), _wheel_length(first_wheel_point.norm() * 0.001f), _wheel_polarity(polarity){
-		static_assert(T > 1U, "Are you serious?");
 		{
 			uint8_t i = 0;
 			for(auto& c : const_cast<std::array<std::array<float, 2>, T>&>(_coefficient)){

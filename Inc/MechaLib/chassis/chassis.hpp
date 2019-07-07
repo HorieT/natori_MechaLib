@@ -67,11 +67,11 @@ protected:
 
 	//加速度(絶対値)
 	float _acc_vec_mps2 = INFINITY;
-	float _acc_rot_rps2 = INFINITY;
+	//float _acc_rot_rps2 = INFINITY;
 
 	//加速カウンタ
 	uint32_t _count_acc_vec = 0;
-	uint32_t _count_acc_rot = 0;
+	//uint32_t _count_acc_rot = 0;
 
 	//PID制御類
 	PID<float> _pid_x_direction;
@@ -190,12 +190,13 @@ protected:
 				//合成
 				Eigen::Vector2f catch_vec;
 				near_point.first.get_vector(catch_vec);
-				input_vec_mps = _pid_line.get() * catch_vec  + near_point.second;
+				input_vec_mps = _pid_line.get() * catch_vec  + near_point.second.first;
 
 				//加減速判定
 				if(std::isfinite(_acc_vec_mps2)){//有限
-				/*	//加減速ブロック
-					if(position_difference.norm() < static_cast<float>(M_PI) * powf(_limit_vel_vec_mps, 2.0f) / (4.0f * _acc_vec_mps2)){
+					input_vec_mps.normalize();
+					//加減速ブロック
+					if(near_point.second.second < static_cast<float>(M_PI) * powf(_limit_vel_vec_mps, 2.0f) / (4.0f * _acc_vec_mps2)){
 						//減速
 
 					}else if(static_cast<float>(_count_acc_vec) < static_cast<float>(M_PI) * _limit_vel_vec_mps * 1000.0f / (2.0f * _acc_vec_mps2)){
@@ -203,84 +204,19 @@ protected:
 						input_vec_mps *= _limit_vel_vec_mps * (1.0f - cosf(2.0f * _acc_vec_mps2 * static_cast<float>(_count_acc_vec) * 0.001f / _limit_vel_vec_mps)) / 2.0f;
 					}else{
 						//最高速
+						input_vec_mps *= _limit_vel_vec_mps;
 					}
-					_count_acc_vec += _scheduler.get_period();*/
+					_count_acc_vec += _scheduler.get_period();
 				}else{//無限
-
+					if(input_vec_mps.norm() > _limit_vel_vec_mps)input_vec_mps = input_vec_mps.normalized() * _limit_vel_vec_mps;
 				}
 
+				float rot_difference = near_point.first.direction_rad - now_position.direction_rad;
+				_pid_rotaition.control(rot_difference, _scheduler.get_period());
+				input_rot_radps = _pid_rotaition.get();
 			}
-
-
-
-			/*Eigen::Vector2f catch_vec(0.0f, 0.0f), vec_buff(0.0f, 0.0f);
-			coordinate<float> def_buff;
-			float rad_buff = 0.0f;
-			float min_def_norm = 1000000.0f;
-			[[maybe_unused]]uint32_t count = 0, get_count = 0;
-
-			for(auto& l : *line){
-				def_buff = l.first - now_position;
-
-
-				if(auto def = (def_buff.x * def_buff.x +  def_buff.y * def_buff.y); def < min_def_norm){//normってなんぞ？？？？？？？？大きさじゃないんか？？？？？？？？
-
-					min_def_norm = def;
-					def_buff.get_vector(vec_buff);
-					l.second.get_vector(catch_vec);
-					rad_buff = l.second.direction_rad;
-					get_count = count;
-
-					if((count + 1) == line->size()){
-						mode = MANUAL;
-						target_vel_vec << 0.0, 0.0;
-						target_vel_rot = 0.0;
-						if(_returnFunc != nullptr)_returnFunc();
-						break;
-					}
-				}
-				++count;
-			}
-			swap_vec = rot * (catch_vec.normalized() * (float)limit_vel_vec * 1000.0f + vec_buff * 9.5f);
-			if(min_def_norm < 1000000.0f){
-				if(!std::isfinite(_acc_vec_mps2)){//無限
-					input_vec_mps = (_acc_vec_mps2_neg * swap_vec.normalized().cast<double>());
-				}else{
-					float dist = 0.0f;
-					for(auto i = line->begin() + count, e = line->end();i <= e;++i)
-						dist += (*i).second.norm();
-					if(float sp = (dist * (float)acc_vec);sp < limit_vel_vec){//減速
-						input_vec_mps = (sp * swap_vec.normalized()).cast<double>();
-					}else{//非減速
-						if(float tag = sqrtf(powf((float)target_vel_vec.x(), 2)+powf((float)target_vel_vec.y(), 2));(float)limit_vel_vec > tag){//加速
-							tag += (float)acc_vec / 100.0f;
-							target_vel_vec = (double)tag * target_vel_vec.normalized();
-							input_vec_mps = (tag * swap_vec.normalized()).cast<double>();
-						}else{//無限と同じ処理
-							input_vec_mps = (limit_vel_vec * swap_vec.normalized().cast<double>());
-						}
-					}
-				}
-
-
-				input_rot_radps = rad_buff + (rot_rock - now_position.direction_rad) * 3.8;
-
-				if(abs(input_rot_radps) > limit_vel_rot){
-					input_rot_radps = (input_rot_radps > 0) ? limit_vel_rot : -limit_vel_rot;
-				}
-			}else{
-				input_rot_radps = 0.0;
-				input_vec_mps = Eigen::Vector2d(0.0, 0.0);
-			}
-			break;*/
 		}
-
-
-
-
-
-
-
+		//停止
 		case move_mode::EMERGENCY:
 			input_vec_mps <<0.0, 0.0;
 			input_rot_radps = 0.0;
@@ -314,22 +250,44 @@ public:
 	/*
 	 * 加減速設定
 	 */
-	inline virtual bool set_acc(float vector_mps2, float rotation_rps2) final{
+	inline virtual bool set_acc(float vector_mps2) final{
 		if(_mode == move_mode::SET_LINE)return false;
 		_acc_vec_mps2 = fabsf(vector_mps2);
-		_acc_rot_rps2 = fabsf(rotation_rps2);
+		//_acc_rot_rps2 = fabsf(rotation_rps2);
+		return true;
+	}
+
+	/*
+	 * pidゲインセット関数
+	 */
+	inline virtual bool set_pid_vector(float p_gain, float i_gain, float d_gain) final{
+		if(_mode == move_mode::SET_GOAL)return false;
+		_pid_x_direction.chage_gaine(p_gain, i_gain, d_gain);
+		_pid_y_direction.chage_gaine(p_gain, i_gain, d_gain);
+		return true;
+	}
+	inline virtual bool set_pid_rotation(float p_gain, float i_gain, float d_gain) final{
+		if(_mode == move_mode::SET_LINE || _mode == move_mode::SET_GOAL)return false;
+		_pid_rotaition.chage_gaine(p_gain, i_gain, d_gain);
+		return true;
+	}
+	inline virtual bool set_pid_line(float p_gain, float i_gain, float d_gain) final{
+		if(_mode == move_mode::SET_LINE)return false;
+		_pid_line.chage_gaine(p_gain, i_gain, d_gain);
 		return true;
 	}
 	/*
 	 * ベクトル入力
 	 */
 	inline virtual void set_velVec(const Eigen::Vector2f& vector_mps, float rotation_rps) final{
+		if(_mode == move_mode::EMERGENCY)return;
 		_target_vel_vec_mps = vector_mps;
 		_target_vel_rot_rps = rotation_rps;
 		_mode = move_mode::MANUAL;
 	}
 
 	inline virtual void set_velVec(float velocity_mps, float direction_rad, float rotation_rps) final{
+		if(_mode == move_mode::EMERGENCY)return;
 		_target_vel_vec_mps << velocity_mps * cosf(direction_rad), velocity_mps * sinf(direction_rad);
 		_target_vel_rot_rps = rotation_rps;
 		_mode = move_mode::MANUAL;
@@ -338,6 +296,7 @@ public:
 	 * 収束目標座標入力(開始時速度0と定義)
 	 */
 	void virtual set_goal(const coordinate<float>& position, float velocity_mps, float rotation_rps, const coordinate<float>& tolerance, void (*finish_callback)(void) = nullptr) final{
+		if(_mode == move_mode::EMERGENCY)return;
 		_target_vel_vec_mps << 0.0, 0.0;
 		_target_vel_rot_rps = 0.0;
 
@@ -388,11 +347,18 @@ public:
 	 * 経路入力
 	 */
 	void set_path(routeLine* line, float velocity_mps, float rotation_rps, void (*finish_callback)(void) = nullptr, float rad = INFINITY){
+		if(_mode == move_mode::EMERGENCY)return;
 		_target_vel_vec_mps << 0.0, 0.0;
 		_target_vel_rot_rps = 0.0;
 		_target_line = line;
+		/**/
 		_limit_vel_vec_mps = velocity_mps;
 		_limit_vel_rot_rps = rotation_rps;
+
+		_pid_line.set(0.0f);
+		_pid_rotaition.set(0.0f);
+		_pid_rotaition.chage_limit(_limit_vel_rot_rps);
+
 		_callback_func = finish_callback;
 		rot_rock = (rad > M_PI || rad < -M_PI) ? _my_position->get_pos().direction_rad : rad;
 		_mode = move_mode::SET_LINE;
@@ -404,6 +370,11 @@ public:
 		_mode = move_mode::EMERGENCY;
 		_target_vel_vec_mps << 0.0f, 0.0f;
 		_target_vel_rot_rps = 0.0f;
+	}
+	virtual void release_emergency(){
+		_target_vel_vec_mps << 0.0f, 0.0f;
+		_target_vel_rot_rps = 0.0f;
+		_mode = move_mode::MANUAL;
 	}
 };
 }
