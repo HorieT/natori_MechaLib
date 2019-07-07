@@ -111,7 +111,9 @@ struct coordinate{
 	/*
 	 * 添え字による要素アクセス
 	 */
-	inline T& operator[](size_t index){return *(&x + index);}
+	const T& operator[](size_t index) const& {return *((&x) + index);}
+	T& operator[](size_t index) & {return *((&x) + index);}
+	T operator[](size_t index) const&& {return *((&x) + index);}
 };
 
 /*以下doubleに対する特殊化*/

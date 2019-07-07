@@ -4,6 +4,7 @@
 #pragma once
 
 #include "MechaLib/Base/calculation.hpp"
+#include "MechaLib/chassis/moveRouteline.hpp"
 #include "MechaLib/sys_timer.hpp"
 #include "MechaLib/posEstimation.hpp"
 #include <Eigen/Geometry>
@@ -49,7 +50,7 @@ protected:
 	timeScheduler<chassis*> _scheduler;
 
 	//走行目標系
-	std::vector<std::pair<Eigen::Vector2f, coordinate<float>>>* _target_line = nullptr;
+	routeLine* _target_line = nullptr;
 	coordinate<float> _target_position_mm{0.0f, 0.0f, 0.0f};
 	Eigen::Vector2f _target_vel_vec_mps{0.0f, 0.0f};// m/s
 	float _target_vel_rot_rps = 0.0f;// rad/s
@@ -57,6 +58,8 @@ protected:
 	coordinate<float> _tolerance{0.0f, 0.0f, 0.0f};
 	uint32_t _in_tolerance_time = 100;
 	uint32_t _in_tolerance_count = 0;
+	//ライン外れセーフティー距離
+	float _safe_distance_line_mm = 1500;
 
 	//上限値
 	float _limit_vel_vec_mps = 0.0f;
@@ -89,14 +92,8 @@ protected:
 		float input_rot_radps = 0.0;
 		//自己位置
 		coordinate<float> now_position = _my_position->get_pos();
-
-
-
-
 		[[maybe_unused]] coordinate<float> now_vel = _my_position->get_vel();
-		coordinate<float> def_pos;
-		Eigen::Vector2f swap_vec(0.0f, 0.0f);
-
+		//ベクトル回転
 		Eigen::Rotation2Df rotate(-now_position.direction_rad);
 
 
@@ -175,6 +172,47 @@ protected:
 		//線入力
 		case move_mode::SET_LINE:
 		{
+			//探索
+			float distance_norm;
+			size_t index;
+			auto near_point = _target_line->route.NN_search(now_position, distance_norm, index);
+
+			/*終了割り込み実装予定*/
+			//ライン外れセーフティー
+			if(_safe_distance_line_mm > distance_norm){
+				//マニュアルモード停止
+				input_vec_mps << 0.0, 0.0;
+				input_rot_radps = 0.0;
+				_mode = move_mode::MANUAL;
+			}else{
+				//ライン収束PID
+				_pid_line.control(distance_norm, _scheduler.get_period());
+				//合成
+				Eigen::Vector2f catch_vec;
+				near_point.first.get_vector(catch_vec);
+				input_vec_mps = _pid_line.get() * catch_vec  + near_point.second;
+
+				//加減速判定
+				if(std::isfinite(_acc_vec_mps2)){//有限
+				/*	//加減速ブロック
+					if(position_difference.norm() < static_cast<float>(M_PI) * powf(_limit_vel_vec_mps, 2.0f) / (4.0f * _acc_vec_mps2)){
+						//減速
+
+					}else if(static_cast<float>(_count_acc_vec) < static_cast<float>(M_PI) * _limit_vel_vec_mps * 1000.0f / (2.0f * _acc_vec_mps2)){
+						//加速
+						input_vec_mps *= _limit_vel_vec_mps * (1.0f - cosf(2.0f * _acc_vec_mps2 * static_cast<float>(_count_acc_vec) * 0.001f / _limit_vel_vec_mps)) / 2.0f;
+					}else{
+						//最高速
+					}
+					_count_acc_vec += _scheduler.get_period();*/
+				}else{//無限
+
+				}
+
+			}
+
+
+
 			/*Eigen::Vector2f catch_vec(0.0f, 0.0f), vec_buff(0.0f, 0.0f);
 			coordinate<float> def_buff;
 			float rad_buff = 0.0f;
@@ -349,10 +387,10 @@ public:
 	/*
 	 * 経路入力
 	 */
-	void set_path(std::vector<std::pair<Eigen::Vector2f, coordinate<float>>>* l, float velocity_mps, float rotation_rps, void (*finish_callback)(void) = nullptr, float rad = INFINITY){
+	void set_path(routeLine* line, float velocity_mps, float rotation_rps, void (*finish_callback)(void) = nullptr, float rad = INFINITY){
 		_target_vel_vec_mps << 0.0, 0.0;
 		_target_vel_rot_rps = 0.0;
-		_target_line = l;
+		_target_line = line;
 		_limit_vel_vec_mps = velocity_mps;
 		_limit_vel_rot_rps = rotation_rps;
 		_callback_func = finish_callback;
