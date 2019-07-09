@@ -189,14 +189,14 @@ protected:
 				_pid_line.control(distance_norm, _scheduler.get_period());
 				//合成
 				Eigen::Vector2f catch_vec;
-				near_point.first.get_vector(catch_vec);
-				input_vec_mps = _pid_line.get() * catch_vec  + near_point.second.first;
+				near_point.get_vector(catch_vec);
+				input_vec_mps = _pid_line.get() * catch_vec  + _target_line->tangent_vector[index];
 
 				//加減速判定
 				if(std::isfinite(_acc_vec_mps2)){//有限
 					input_vec_mps.normalize();
 					//加減速ブロック
-					if(near_point.second.second < static_cast<float>(M_PI) * powf(_limit_vel_vec_mps, 2.0f) / (4.0f * _acc_vec_mps2)){
+					if((_target_line->all_length_mm - _target_line->length_mm[index]) < static_cast<float>(M_PI) * powf(_limit_vel_vec_mps, 2.0f) / (4.0f * _acc_vec_mps2)){
 						//減速
 
 					}else if(static_cast<float>(_count_acc_vec) < static_cast<float>(M_PI) * _limit_vel_vec_mps * 1000.0f / (2.0f * _acc_vec_mps2)){
@@ -211,7 +211,7 @@ protected:
 					if(input_vec_mps.norm() > _limit_vel_vec_mps)input_vec_mps = input_vec_mps.normalized() * _limit_vel_vec_mps;
 				}
 
-				float rot_difference = near_point.first.direction_rad - now_position.direction_rad;
+				float rot_difference = near_point.direction_rad - now_position.direction_rad;
 				_pid_rotaition.control(rot_difference, _scheduler.get_period());
 				input_rot_radps = _pid_rotaition.get();
 			}

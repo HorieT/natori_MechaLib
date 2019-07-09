@@ -6,9 +6,14 @@
 
 namespace Mecha{
 
+/*
+ * ツリー、接線ベクトル、距離の要素数はそれぞれ等しくなるようにツールで生成する。
+ * */
 class routeLine{
 public:
-	kdtree<coordinate<float>, std::pair<Eigen::Vector2f, float>, 2> route;
-	float length_mm;
+	kdtree<coordinate<float>, 2> route;
+	std::vector<Eigen::Vector2f> tangent_vector;
+	std::vector<float> length_mm;
+	float all_length_mm;
 };
 }

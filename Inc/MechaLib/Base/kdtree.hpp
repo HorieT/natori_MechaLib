@@ -14,7 +14,7 @@ namespace Mecha{
 /*
  *
  */
-template<typename Key, typename Data, size_t Dim = sizeof(Key)>
+template<typename Key, size_t Dim = sizeof(Key)>
 class kdtree {
 	static_assert(sizeof(Key) >= Dim, "Don't over dimension size of Key size");
 private:
@@ -31,7 +31,7 @@ private:
 	std::vector<Node> _node;
 	Node* _root = nullptr;
 
-	std::vector<std::pair<Key, Data>> _data;
+	std::vector<Key> _data;
 
 	/*再帰的ツリー構築関数*/
 	Node* build_recursive(typename std::vector<Node>::iterator first, typename  std::vector<Node>::iterator last, size_t depth)
@@ -48,7 +48,7 @@ private:
 			first, //first
 			now_node, //nth(基準インデックス)
 			last, //last
-			[&](Node lhs, Node rhs) {return _data[lhs._data_index].first[axis] < _data[rhs._data_index].first[axis]; });//compare関数
+			[&](Node lhs, Node rhs) {return _data[lhs._data_index][axis] < _data[rhs._data_index][axis]; });//compare関数
 
 		(*now_node)._next[0] = build_recursive(first, now_node, depth + 1);
 		(*now_node)._next[1] = build_recursive(std::next(now_node), last, depth + 1);
@@ -61,7 +61,7 @@ private:
 	void NN_search_recursive(const Key& query, Node* node, float& min, size_t& out_index) {
 		if (node == nullptr)return;
 		//調査ノード
-		const Key& check_node_key = _data[node->_data_index].first;
+		const Key& check_node_key = _data[node->_data_index];
 
 		//距離測定
 		const float distance = get_distance(query, check_node_key);
@@ -99,7 +99,7 @@ public:
 	~kdtree() {}
 
 	//データ配列からツリーの構築
-	void build(std::vector<std::pair<Key, Data>>& data) {
+	void build(std::vector<Key>& data) {
 		//現在のツリーの削除
 		clear();
 
@@ -117,14 +117,14 @@ public:
 				_data.begin(),
 				_data.end(),
 				0.0f,
-				[=](float acc, std::pair<Key, Data> i) {return static_cast<float>(i.first[dim]) + acc; })
+				[=](float acc, Key i) {return static_cast<float>(i[dim]) + acc; })
 				/ static_cast<float>(_data.size());
 
 			dispersion.at(dim) = std::accumulate(
 				_data.begin(),
 				_data.end(),
 				0.0f,
-				[=](float acc, std::pair<Key, Data> i) {return powf(static_cast<float>(i.first[dim]) - average, 2.0f) + acc; })
+				[=](float acc, Key i) {return powf(static_cast<float>(i[dim]) - average, 2.0f) + acc; })
 				/ static_cast<float>(_data.size());
 		}
 		//分散の大きい順に軸を並べる
@@ -142,7 +142,7 @@ public:
 	}
 
 	/*最近傍探索*/
-	const std::pair<Key, Data>& NN_search(const Key& query, float& distance, size_t& index) {
+	const Key& NN_search(const Key& query, float& distance, size_t& index) {
 		distance = std::numeric_limits<float>::max();
 		typename std::vector<Node>::iterator get_node;
 		NN_search_recursive(query, _root, distance, index);
@@ -155,8 +155,8 @@ public:
 	}*/
 
 	inline size_t size() { return _data.size(); }
-	const std::pair<Key, Data>& operator[](size_t index) const& {return _data[index];}
-	std::pair<Key, Data>& operator[](size_t index) & {return _data[index];}
-	std::pair<Key, Data> operator[](size_t index) const&& {return _data[index];}
+	const Key& operator[](size_t index) const& {return _data[index];}
+	Key& operator[](size_t index) & {return _data[index];}
+	Key operator[](size_t index) const&& {return _data[index];}
 };
 }

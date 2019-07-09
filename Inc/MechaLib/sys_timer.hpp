@@ -18,17 +18,13 @@ namespace Mecha{
  * ŽžŠÔ§Œäƒx[ƒX
  */
 class sysClock {
+	static_assert(__GNUC__ >= 7, "This program used c++17's language function!");
 private:
 	uint32_t _start = 0;
 	uint32_t _period;
 	bool _setting = false;
-
-#if (__GNUC__ >= 7)
 	static inline volatile uint32_t _time = 0;
 	static inline std::vector<sysClock*> _scheduler;
-#else
-	static_assert(false, "This program used c++17's language function!");
-#endif
 
 
 	inline static void inc_time(){_time++;}
