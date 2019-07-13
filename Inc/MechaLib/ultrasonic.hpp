@@ -4,6 +4,7 @@
 #pragma once
 
 #include "MechaLib_HAL_global.hpp"
+#include "MechaLib/Base/standard.hpp"
 #include <tuple>
 #include <bitset>
 
@@ -90,7 +91,9 @@ private:
 	}
 
 public:
-	ultrasonic(TIM_HandleTypeDef* htim, IOPin gpio): T(std::bitset<16>(gpio.pin).count()), _tim(htim), _gpio(gpio.port){
+	//TÇ™à¯êîÇ…ÇÊÇ¡Çƒï€è·Ç≥ÇÍÇ»Ç¢ÇÃÇ≈çÌèú
+	/*ultrasonic(TIM_HandleTypeDef* htim, IOPin gpio): T(std::bitset<16>(gpio.pin).count()), _tim(htim), _gpio(gpio.port){
+
 		uint8_t i = 0;
 		for(auto& l : _line){
 			while(1){
@@ -101,10 +104,11 @@ public:
 				++i;
 			}
 		}
-	}
-	template<uint16_t... Args>
-	ultrasonic(TIM_HandleTypeDef* htim, GPIO_TypeDef gpio, Args Pins) : T(sizeof(Pins)), _tim(htim), _gpio(gpio){
-		std::array<uint16_t, T>pin = Pins;
+	}*/
+	template<typename... Args>
+	ultrasonic(TIM_HandleTypeDef* htim, GPIO_TypeDef* gpio, Args... Pins) :_tim(htim), _gpio(gpio){
+		static_assert((check_same_type<Args...>() && std::is_same<decltype(std::get<0>(std::declval<std::tuple<Args...>>())), uint16_t&&>::value && T == sizeof...(Args)), "Type of Pins is different");
+		std::array<uint16_t, T>pin = {Pins...};
 		auto it = pin.begin();
 		for(auto& l : _line)l._pin = *it++;
 	}
