@@ -91,20 +91,6 @@ private:
 	}
 
 public:
-	//T‚ªˆø”‚É‚æ‚Á‚Ä•Ûá‚³‚ê‚È‚¢‚Ì‚Åíœ
-	/*ultrasonic(TIM_HandleTypeDef* htim, IOPin gpio): T(std::bitset<16>(gpio.pin).count()), _tim(htim), _gpio(gpio.port){
-
-		uint8_t i = 0;
-		for(auto& l : _line){
-			while(1){
-				if(uint16_t pin = 1U << i; pin & gpio.pin){
-					l._pin = pin;
-					break;
-				}
-				++i;
-			}
-		}
-	}*/
 	template<typename... Args>
 	ultrasonic(TIM_HandleTypeDef* htim, GPIO_TypeDef* gpio, Args... Pins) :_tim(htim), _gpio(gpio){
 		static_assert((check_same_type<Args...>() && std::is_same<decltype(std::get<0>(std::declval<std::tuple<Args...>>())), uint16_t&&>::value && T == sizeof...(Args)), "Type of Pins is different");

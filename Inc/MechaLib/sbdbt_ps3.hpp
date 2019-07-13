@@ -24,7 +24,7 @@
 
 namespace Mecha{
 
-class sbdbt{
+class sbdbtPS3{
 public:
 	using button = uint32_t;
 
@@ -40,7 +40,7 @@ private:
 
 
 	UART_HandleTypeDef* _uart;
-	timeScheduler<sbdbt*> _schduler;
+	timeScheduler<sbdbtPS3*> _schduler;
 
 	std::array<uint8_t, SBDBT_DATA_SIZE> _buttonn_data{0};
 	std::array<uint8_t, SBDBT_DATA_SIZE> _last_buttonn_data{0};
@@ -52,7 +52,7 @@ private:
 
 	bool _continue_flag = false;
 
-	static void scheduler_fanc(sbdbt* me){me->timeout();}
+	static void scheduler_fanc(sbdbtPS3* me){me->timeout();}
 	void timeout(void){
 		_continue_flag = false;
 		{
@@ -97,9 +97,9 @@ public:
 	static constexpr button PS3AnalogRX =		0x0F000000;
 	static constexpr button PS3AnalogRY = 		0xF0000000;
 
-	sbdbt(UART_HandleTypeDef* huart, void (*Callback)(void), uint32_t time)
+	sbdbtPS3(UART_HandleTypeDef* huart, void (*Callback)(void), uint32_t time)
 	: _uart(huart), _schduler(scheduler_fanc, time), _timeout_callback(Callback){}
-	~sbdbt(){_schduler.erase();}
+	~sbdbtPS3(){_schduler.erase();}
 
 
 	inline void init(){

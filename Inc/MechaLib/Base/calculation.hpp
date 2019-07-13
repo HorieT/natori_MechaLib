@@ -57,13 +57,13 @@ struct coordinate{
 	 * 原点からの距離算出関数
 	 * 戻り値:距離
 	 */
-	inline auto norm() const -> decltype(x + 0.0f) {return sqrtf(powf(x, 2.0f) + powf(y, 2.0f));}//自動昇格でサイズ抑え
+	inline constexpr auto norm() const -> decltype(x + 0.0f) {return sqrtf(powf(x, 2.0f) + powf(y, 2.0f));}//自動昇格でサイズ抑え
 
 	/*
 	 * 位置ベクトルの傾き算出関数
 	 * 戻り値:角度
 	 */
-	inline auto angle() const ->decltype(x + 0.0f) {return atan2f(y, x);}
+	inline constexpr auto angle() const ->decltype(x + 0.0f) {return atan2f(y, x);}
 
 	/*
 	 * 算術演算子オーバーロード

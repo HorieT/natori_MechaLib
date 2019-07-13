@@ -1,10 +1,5 @@
 /*
- * 2019/06/23 Horie
- *
- *C++17に未対応ならばどっかの.cppに
-volatile uint32_t Mecha::sysClock::Time = 0;
-std::vector<Mecha::sysClock*> Mecha::sysClock::ts;
-を記述すること
+ * 2019/07/13 Horie
  */
 #pragma once
 #include <cstdint>
@@ -18,7 +13,6 @@ namespace Mecha{
  * 時間制御ベース
  */
 class sysClock {
-	static_assert(__GNUC__ >= 7, "This program used c++17's language function!");
 private:
 	uint32_t _start = 0;
 	uint32_t _period;
