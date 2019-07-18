@@ -1,5 +1,5 @@
 /*
- * 2019/07/13 Horie
+  * 2019/07/13 Horie
  */
 #pragma once
 #include <cstdint>
@@ -11,6 +11,7 @@ namespace Mecha{
 
 /*
  * 時間制御ベース
+ * check()を1ms周期で呼び出すように
  */
 class sysClock {
 private:
@@ -85,11 +86,10 @@ public:
 	}
 
 	//関数遅延呼び出し
-	/*
 	template<class T>
 	static void sys_delayCall(void (*callback)(T), T arg, uint32_t ms){
-
-	}*/
+		timeScheduler(callback, ms).set(arg);
+	}
 
 	volatile static uint32_t get_time(){return _time;}
 };
@@ -110,6 +110,7 @@ public:
 private:
 	void (*function)(T_arg);
 	T_arg argment = static_cast<T_arg>(0);
+	//const bool one_time;
 
 	void callback() override{function(argment);}
 };
@@ -129,11 +130,6 @@ private:
 
 	void callback() override{function();}
 };
-
-template<class T>
-void class_scheduler_callback(T* c){
-	c->scheduler_fanc();
-}
 }
 
 

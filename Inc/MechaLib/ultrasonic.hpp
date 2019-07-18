@@ -12,6 +12,7 @@ namespace Mecha{
 
 /*
  * 大量の某係数分の在庫を抱えるseedの超音波センサのクラス
+ * タイマのカウントは1usにしてください
  * */
 template <size_t T>
 class ultrasonic{
@@ -83,9 +84,9 @@ private:
 	void timeout(TIM_HandleTypeDef *htim){
 		HAL_TIM_Base_Stop(_tim);
 		for(auto& l : _line){
-			if(l.__got_flag != sig_state::CATCH_FALL){
+			if(l._got_flag != sig_state::CATCH_FALL){
 				l._distance = INFINITY;
-				l.__got_flag = sig_state::CATCH_FALL;
+				l._got_flag = sig_state::CATCH_FALL;
 			}
 		}
 	}
@@ -93,7 +94,7 @@ private:
 public:
 	template<typename... Args>
 	ultrasonic(TIM_HandleTypeDef* htim, GPIO_TypeDef* gpio, Args... Pins) :_tim(htim), _gpio(gpio){
-		static_assert((check_same_type<Args...>() && std::is_same<decltype(std::get<0>(std::declval<std::tuple<Args...>>())), uint16_t&&>::value && T == sizeof...(Args)), "Type of Pins is different");
+		static_assert((check_same_type<uint16_t&&, Args...>() && T == sizeof...(Args)), "Type of Pins is different");
 		std::array<uint16_t, T>pin = {Pins...};
 		auto it = pin.begin();
 		for(auto& l : _line)l._pin = *it++;

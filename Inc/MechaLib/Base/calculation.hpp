@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <array>
 #include <iterator>
+#include <type_traits>
 
 #include <Eigen/Core>
 /*
@@ -26,6 +27,7 @@ namespace Mecha{
  */
 template<typename T>
 struct coordinate{
+	static_assert(std::is_arithmetic<T>::value, "Type is not arithmetic.");
 	T x;
 	T y;
 	T direction_rad;//方向角
@@ -164,6 +166,7 @@ const inline Mecha::coordinate<T> operator-(const U& l_operand, const Mecha::coo
 template<class T>
 class PID {
 private:
+	static_assert(std::is_signed<T>::value, "Type is not signed.");
 	T* const _value;//出力値
 	std::array<float, 3> _deviation = {0.0f, 0.0f, 0.0f};//偏差
 
@@ -180,7 +183,7 @@ public:
 	/*
 	 * コンストラクタ
 	 * */
-	PID(T* value, float P_gain = 0.0f, float I_gain = 0.0f, float D_gain = 0.0f, T limit = static_cast<T>(0))
+	explicit PID(T* value, float P_gain = 0.0f, float I_gain = 0.0f, float D_gain = 0.0f, T limit = static_cast<T>(0))
 	: _value(value), _make_value_flag(false), _P_gain(P_gain), _I_gain(I_gain), _D_gain(D_gain),_limit(limit){}
 
 	PID(float P_gain = 0.0f, float I_gain = 0.0f, float D_gain = 0.0f, T limit = static_cast<T>(0))

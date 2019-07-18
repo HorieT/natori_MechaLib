@@ -206,11 +206,9 @@ public:
 	}
 
 	//PS3コントローラのボタン割り込み
-	inline void set_sbdbt_Callback(void (*Callback)(button bt)){
+	inline void set_sbdbt_Callback(void (*Callback)(button)){
 		_button_callback = Callback;
 	}
-
-
 };
 
 }

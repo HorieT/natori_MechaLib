@@ -6,7 +6,7 @@
 #pragma once
 #include "MechaLib/MechaLib_HAL_global.hpp"
 #include "MechaLib/motor/motor.hpp"
-#include <cstring>
+#include <algorithm>
 
 namespace Mecha{
 
@@ -52,20 +52,13 @@ protected:
 
 	template<class T>
 	void write_data(md_address adr, const T* data){
-		std::array<uint8_t, 8> buff = {0};
+		std::array<uint8_t, sizeof(T)> buff = {0};
 		buff.at(0) = static_cast<uint8_t>(adr);
-		std::array<uint8_t, sizeof(T)> fifo;
 
 		if(adr != md_address::EMERGENCY_STOP){
 			_tx_header.DLC = 1 + sizeof(T);
-			std::memcpy(&fifo[0], data, sizeof(T));
-			{
-				uint8_t num = 0;
-				for(auto f : fifo){
-					buff.at(sizeof(T) - num) = f;
-					++num;
-				}
-			}
+			std::memcpy(&buff[0], data, sizeof(T));
+			std::reverse(buff.begin(), buff.end());
 		}else{
 			_tx_header.DLC = 1;
 		}
