@@ -94,7 +94,7 @@ private:
 public:
 	template<typename... Args>
 	ultrasonic(TIM_HandleTypeDef* htim, GPIO_TypeDef* gpio, Args... Pins) :_tim(htim), _gpio(gpio){
-		static_assert((check_same_type<uint16_t&&, Args...>() && T == sizeof...(Args)), "Type of Pins is different");
+		static_assert(std::conjunction<std::is_same<uint16_t, Args>...>::value, "Type of Pins must to be 'uint16_t'.");
 		std::array<uint16_t, T>pin = {Pins...};
 		auto it = pin.begin();
 		for(auto& l : _line)l._pin = *it++;
