@@ -71,6 +71,7 @@ protected:
 
 	//加速カウンタ
 	uint32_t _count_acc_vec = 0;
+	uint32_t _count_acc_vec_neg = 0;
 	//uint32_t _count_acc_rot = 0;
 
 	//PID制御類
@@ -140,33 +141,6 @@ protected:
 			//回転はPIDクラス内で頭打ち
 			input_rot_radps = _pid_rotaition.get();
 
-
-			/*
-			//進行方向単位ベクトル
-			input_vec_mps = rotate * position_difference_vec.normalized();
-			if(std::isfinite(_acc_vec_mps2)){//有限
-				//加減速ブロック
-				if(position_difference.norm() < static_cast<float>(M_PI) * powf(_limit_vel_vec_mps, 2.0f) / (4.0f * _acc_vec_mps2)){
-					//減速
-
-				}else if(static_cast<float>(_count_acc_vec) < static_cast<float>(M_PI) * _limit_vel_vec_mps * 1000.0f / (2.0f * _acc_vec_mps2)){
-					//加速
-					input_vec_mps *= _limit_vel_vec_mps * (1.0f - cosf(2.0f * _acc_vec_mps2 * static_cast<float>(_count_acc_vec) * 0.001f / _limit_vel_vec_mps)) / 2.0f;
-				}else{
-					//最高速
-				}
-				_count_acc_vec += _scheduler.get_period();
-			}else{//無限
-
-			}
-
-			input_rot_radps = position_difference.direction_rad;
-			if(std::isfinite(_acc_rot_rps2)){
-
-			}else{
-
-			}
-			*/
 			break;
 		}
 		//線入力
@@ -198,15 +172,16 @@ protected:
 					//加減速ブロック
 					if((_target_line->all_length_mm - _target_line->length_mm[index]) < static_cast<float>(M_PI) * powf(_limit_vel_vec_mps, 2.0f) / (4.0f * _acc_vec_mps2)){
 						//減速
-
+						input_vec_mps *= _limit_vel_vec_mps * (1.0f + cosf(2.0f * _acc_vec_mps2 * static_cast<float>(_count_acc_vec) * 0.001f / _limit_vel_vec_mps)) / 2.0f;
+						_count_acc_vec_neg += _scheduler.get_period();
 					}else if(static_cast<float>(_count_acc_vec) < static_cast<float>(M_PI) * _limit_vel_vec_mps * 1000.0f / (2.0f * _acc_vec_mps2)){
 						//加速
 						input_vec_mps *= _limit_vel_vec_mps * (1.0f - cosf(2.0f * _acc_vec_mps2 * static_cast<float>(_count_acc_vec) * 0.001f / _limit_vel_vec_mps)) / 2.0f;
+						_count_acc_vec += _scheduler.get_period();
 					}else{
 						//最高速
 						input_vec_mps *= _limit_vel_vec_mps;
 					}
-					_count_acc_vec += _scheduler.get_period();
 				}else{//無限
 					if(input_vec_mps.norm() > _limit_vel_vec_mps)input_vec_mps = input_vec_mps.normalized() * _limit_vel_vec_mps;
 				}
@@ -300,36 +275,6 @@ public:
 		_target_vel_vec_mps << 0.0, 0.0;
 		_target_vel_rot_rps = 0.0;
 
-		/*
-		//走行距離
-		coordinate<float> position_distance = position - _my_position->get_pos();
-
-		//加減速設定
-		//移動ベクトル
-		if(std::isfinite(_acc_vec_mps2)){//有限
-			_count_acc_vec = 0U;
-			//加減速距離による最大値の設定
-			_limit_vel_vec_mps =
-					(position_distance.norm() > (static_cast<float>(M_PI) * powf(velocity_mps, 2.0f) / (2.0f * _acc_vec_mps2))) ?
-							velocity_mps :
-							sqrtf(2.0f * _acc_vec_mps2 * position_distance.norm() / static_cast<float>(M_PI));
-
-		}else{//無限
-			_limit_vel_vec_mps = velocity_mps;
-		}
-		//回転ベクトル
-		if(std::isfinite(_acc_rot_rps2)){//有限
-			_count_acc_rot = 0U;
-			//加減速距離による最大値の設定
-			_limit_vel_rot_rps =
-					(position_distance.direction_rad > (static_cast<float>(M_PI) * powf(_limit_vel_rot_rps, 2.0f) / (2.0f * _acc_rot_rps2))) ?
-							rotation_rps :
-							sqrtf(2.0f * _acc_rot_rps2 * position_distance.direction_rad / static_cast<float>(M_PI));
-
-		}else{//無限
-			_limit_vel_rot_rps = rotation_rps;
-		}
-*/
 
 		_limit_vel_vec_mps = velocity_mps;
 		_pid_x_direction.set(0.0f);
@@ -351,13 +296,28 @@ public:
 		_target_vel_vec_mps << 0.0, 0.0;
 		_target_vel_rot_rps = 0.0;
 		_target_line = line;
+
+		//加減速設定
+		//移動ベクトル
+		if(std::isfinite(_acc_vec_mps2)){//有限
+			_count_acc_vec = 0U;
+			_count_acc_vec_neg = 0;
+			//加減速距離による最大値の設定
+			_limit_vel_vec_mps =
+					(line->all_length_mm / 1000.0f > (static_cast<float>(M_PI) * powf(velocity_mps, 2.0f) / (2.0f * _acc_vec_mps2))) ?
+							velocity_mps :
+							sqrtf(2.0f * _acc_vec_mps2 * line->all_length_mm / 1000.0f / static_cast<float>(M_PI));
+		}else{//無限
+			_limit_vel_vec_mps = velocity_mps;
+		}
+
 		/**/
-		_limit_vel_vec_mps = velocity_mps;
 		_limit_vel_rot_rps = rotation_rps;
 
 		_pid_line.set(0.0f);
 		_pid_rotaition.set(0.0f);
 		_pid_rotaition.chage_limit(_limit_vel_rot_rps);
+
 
 		_callback_func = finish_callback;
 		rot_rock = (rad > M_PI || rad < -M_PI) ? _my_position->get_pos().direction_rad : rad;
