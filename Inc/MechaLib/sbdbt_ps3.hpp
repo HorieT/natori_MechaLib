@@ -1,5 +1,5 @@
 /*
- * 2019/06/27 Horie
+ * 2019/08/17 Horie
  */
 #pragma once
 #include "MechaLib_HAL_global.hpp"
@@ -39,20 +39,19 @@ private:
 	static constexpr int8_t ANAROG_CENTER =		64;
 
 
-	UART_HandleTypeDef* _uart;
-	timeScheduler<sbdbtPS3*> _schduler;
+	UART_HandleTypeDef* const _uart;
+	timeScheduler<void> _schduler;
 
 	std::array<uint8_t, SBDBT_DATA_SIZE> _buttonn_data{0};
 	std::array<uint8_t, SBDBT_DATA_SIZE> _last_buttonn_data{0};
 	std::array<uint8_t, SBDBT_BUFF_SIZE> _buff{0};
 
-	void (*_button_callback)(button bt) = 0;
-	void (*_timeout_callback)(void);
+	std::function<void(button)> _button_callback = nullptr;
+	std::function<void()> _timeout_callback;
 
 
 	bool _continue_flag = false;
 
-	static void scheduler_fanc(sbdbtPS3* me){me->timeout();}
 	void timeout(void){
 		_continue_flag = false;
 		{
@@ -64,7 +63,7 @@ private:
 		}//for(uint8_t i = 0;i < buttonnData.size();i++)buttonnData.at(i) = 0;
 
 		_last_buttonn_data = _buttonn_data;
-		_timeout_callback();
+		if(_timeout_callback != nullptr)_timeout_callback();
 	}
 
 public:
@@ -97,14 +96,14 @@ public:
 	static constexpr button PS3AnalogRX =		0x0F000000;
 	static constexpr button PS3AnalogRY = 		0xF0000000;
 
-	sbdbtPS3(UART_HandleTypeDef* huart, void (*Callback)(void), uint32_t time)
-	: _uart(huart), _schduler(scheduler_fanc, time), _timeout_callback(Callback){}
+	sbdbtPS3(UART_HandleTypeDef* huart, std::function<void()>&& callback_func, uint32_t time)
+	: _uart(huart), _schduler([this]{timeout();}, time), _timeout_callback(callback_func){}
 	~sbdbtPS3(){_schduler.erase();}
 
 
 	inline void init(){
 		HAL_UART_Receive_DMA(_uart, _buff.data(), SBDBT_BUFF_SIZE);
-		_schduler.set(this);
+		_schduler.set();
 	}
 
 	//PS3コントローラからの受信(※必ず HAL_UART_RxCpltCallback()内に記入すること)
@@ -206,8 +205,8 @@ public:
 	}
 
 	//PS3コントローラのボタン割り込み
-	inline void set_sbdbt_Callback(void (*Callback)(button)){
-		_button_callback = Callback;
+	inline void set_sbdbt_Callback(std::function<void(button)>&& callback_func){
+		_button_callback = callback_func;
 	}
 };
 

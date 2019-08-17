@@ -58,7 +58,7 @@ private:
 	}
 
 	/*再帰的最近傍探索*/
-	void NN_search_recursive(const Key& query, Node* node, float& min, size_t& out_index) {
+	void NN_search_recursive(const Key& query, Node* node, float& min, size_t& out_index) const{
 		if (node == nullptr)return;
 		//調査ノード
 		const Key& check_node_key = _data[node->_data_index];
@@ -80,13 +80,13 @@ private:
 	}
 
 	/*点間距離測定*/
-	inline float get_distance(const Key& point1, const Key& point2) {
+	inline float get_distance(const Key& point1, const Key& point2) const{
 		float dist = 0.0f;
 		for (size_t i = 0; i < Dim; ++i)
 			dist += powf(static_cast<float>(point1[i] - point2[i]), 2.0f);
 		return sqrtf(dist);
 	}
-	inline float get_distance_sq(const Key& point1, const Key& point2) {
+	inline float get_distance_sq(const Key& point1, const Key& point2) const{
 		float dist = 0.0f;
 		for (size_t i = 0; i < Dim; ++i)
 			dist += powf(static_cast<float>(point1[i] - point2[i]), 2.0f);
@@ -94,12 +94,13 @@ private:
 	}
 public:
 	kdtree() {
-		std::iota(_axis_order.begin(), _axis_order.end(), 0);
+		//std::iota(_axis_order.begin(), _axis_order.end(), 0);
 	}
+	kdtree(const kdtree&) = delete;
 	~kdtree() {}
 
 	//データ配列からツリーの構築
-	void build(std::vector<Key>& data) {
+	void build(const std::vector<Key>& data) {
 		//現在のツリーの削除
 		clear();
 
@@ -120,11 +121,13 @@ public:
 				[=](float acc, Key i) {return static_cast<float>(i[dim]) + acc; })
 				/ static_cast<float>(_data.size());
 
-			dispersion.at(dim) = std::accumulate(
-				_data.begin(),
-				_data.end(),
-				0.0f,
-				[=](float acc, Key i) {return powf(static_cast<float>(i[dim]) - average, 2.0f) + acc; })
+			dispersion.at(dim) =
+				std::accumulate(
+					_data.begin(),
+					_data.end(),
+					0.0f,
+					[=](float acc, Key i) {return powf(static_cast<float>(i[dim]) - average, 2.0f) + acc; }
+				)
 				/ static_cast<float>(_data.size());
 		}
 		//分散の大きい順に軸を並べる
@@ -142,7 +145,7 @@ public:
 	}
 
 	/*最近傍探索*/
-	const Key& NN_search(const Key& query, float& distance, size_t& index) {
+	const Key& NN_search(const Key& query, float& distance, size_t& index) const{
 		distance = std::numeric_limits<float>::max();
 		typename std::vector<Node>::iterator get_node;
 		NN_search_recursive(query, _root, distance, index);
@@ -154,7 +157,7 @@ public:
 
 	}*/
 
-	inline size_t size() { return _data.size(); }
+	inline size_t size() const{ return _data.size(); }
 	const Key& operator[](size_t index) const& {return _data[index];}
 	Key& operator[](size_t index) & {return _data[index];}
 	Key operator[](size_t index) const&& {return _data[index];}

@@ -47,7 +47,7 @@ protected:
 	SelfPos* const _my_position;
 
 	//周期制御
-	timeScheduler<chassis*> _scheduler;
+	timeScheduler<void> _scheduler;
 
 	//走行目標系
 	routeLine* _target_line = nullptr;
@@ -59,7 +59,7 @@ protected:
 	uint32_t _in_tolerance_time = 100;
 	uint32_t _in_tolerance_count = 0;
 	//ライン外れセーフティー距離
-	float _safe_distance_line_mm = 1500;
+	float _safe_distance_line_mm = 1500.0f;
 
 	//上限値
 	float _limit_vel_vec_mps = 0.0f;
@@ -81,11 +81,8 @@ protected:
 	PID<float> _pid_line;
 
 	float rot_rock = 0.0f;//角度保持
-	void (*_callback_func)(void) = nullptr;//終了呼び出し関数
+	std::function<void()> _callback_func = nullptr;//終了呼び出し関数
 
-	static void scheduler_fanc(chassis* me){
-		me->move_set();
-	}
 
 	virtual void move_set() final{
 		//入力用変数
@@ -210,7 +207,7 @@ public:
 	 * コンストラクタ
 	 */
 	chassis(SelfPos* my_position, uint32_t period_ms) :
-		_my_position(my_position), _scheduler(scheduler_fanc, period_ms),
+		_my_position(my_position), _scheduler([this]{move_set();}, period_ms),
 		_pid_x_direction(), _pid_y_direction(), _pid_rotaition(), _pid_line(){}
 	/*
 	 * デストラクタ
@@ -220,7 +217,7 @@ public:
 	/*
 	 * 初期化処理
 	 */
-	void init(){_scheduler.set(this);}
+	void init(){_scheduler.set();}
 
 	/*
 	 * 加減速設定
@@ -270,7 +267,7 @@ public:
 	/*
 	 * 収束目標座標入力(開始時速度0と定義)
 	 */
-	void virtual set_goal(const coordinate<float>& position, float velocity_mps, float rotation_rps, const coordinate<float>& tolerance, void (*finish_callback)(void) = nullptr) final{
+	void virtual set_goal(const coordinate<float>& position, float velocity_mps, float rotation_rps, const coordinate<float>& tolerance, std::function<void()>&& finish_callback = nullptr) final{
 		if(_mode == move_mode::EMERGENCY)return;
 		_target_vel_vec_mps << 0.0, 0.0;
 		_target_vel_rot_rps = 0.0;
@@ -285,13 +282,13 @@ public:
 		_target_position_mm = position;
 
 		_tolerance = tolerance;
-		_callback_func = finish_callback;
+		_callback_func = std::move(finish_callback);
 		_mode = move_mode::SET_GOAL;
 	}
 	/*
 	 * 経路入力
 	 */
-	void set_path(routeLine* line, float velocity_mps, float rotation_rps, void (*finish_callback)(void) = nullptr, float rad = INFINITY){
+	void set_path(routeLine* line, float velocity_mps, float rotation_rps, std::function<void()>&& finish_callback = nullptr, float rad = INFINITY){
 		if(_mode == move_mode::EMERGENCY)return;
 		_target_vel_vec_mps << 0.0, 0.0;
 		_target_vel_rot_rps = 0.0;

@@ -94,7 +94,7 @@ public:
 		_target_rpm = 0;
 		_target_rad = 0;
 		write_data(md_address::WRITE_RESOLITION, &_resolution);
-		_scheduler.set(this);
+		_scheduler.set();
 	}
 	virtual void stop() override{
 		_scheduler.erase();
@@ -112,11 +112,12 @@ public:
 	virtual void set_PID (float p_gain, float i_gain, float d_gain) override{
 		float p = p_gain, i = i_gain, d = d_gain;
 		write_data(md_address::WRITE_P_GAIN, &p);
-		sysClock::sys_delay(20);
+		sys_delayCall([this, &i]{write_data(md_address::WRITE_I_GAIN, &i);}, 10);
+		sys_delayCall([this, &d]{write_data(md_address::WRITE_D_GAIN, &d);}, 20);
+		/*sysClock::sys_delay(10);
 		write_data(md_address::WRITE_I_GAIN, &i);
-		sysClock::sys_delay(20);
-		write_data(md_address::WRITE_D_GAIN, &d);
-		sysClock::sys_delay(20);
+		sysClock::sys_delay(10);
+		write_data(md_address::WRITE_D_GAIN, &d);*/
 	}
 	virtual void set_limitRPM(uint32_t limit) override{
 		_limit_rpm = limit;
@@ -254,7 +255,7 @@ public:
 		_target_rpm = 0;
 		_target_rad = 0;
 		HAL_TIM_Encoder_Start(_htim, TIM_CHANNEL_ALL);
-		_scheduler.set(this);
+		_scheduler.set();
 	}
 	virtual void stop() override{
 		_scheduler.erase();

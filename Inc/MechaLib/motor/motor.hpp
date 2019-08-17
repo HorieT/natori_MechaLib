@@ -15,10 +15,6 @@ namespace Mecha{
  */
 class motor{
 private:
-	static void scheduler_fanc(motor* me){
-		me->speed_set();
-	}
-
 	//子クラスのタイムスケジューラ関数
 	virtual void speed_set() = 0;
 
@@ -31,7 +27,7 @@ protected:
 	};
 
 	drive_mode _mode = drive_mode::EMERGENCY;
-	timeScheduler<motor*> _scheduler;
+	timeScheduler<void> _scheduler;
 	const uint32_t _resolution;//エンコーダ分解能.
 
 	float _target_duty_per = 0.0f;//目標デューティ比[%]
@@ -43,7 +39,7 @@ protected:
 
 public:
 	motor(uint8_t period, uint32_t resolution, uint32_t limit)
-	: _scheduler(scheduler_fanc, period), _resolution(resolution), _limit_rpm(limit){}
+	: _scheduler([this]{speed_set();}, period), _resolution(resolution), _limit_rpm(limit){}
 	virtual ~motor(){
 		_scheduler.erase();
 	}

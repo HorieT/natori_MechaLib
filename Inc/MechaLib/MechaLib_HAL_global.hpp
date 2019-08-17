@@ -33,7 +33,7 @@ public:
 	 * コンストラクタ
 	 * 第一引数:ポートアドレス, 第二引数:ピンbit
 	 */
-	IOPin(GPIO_TypeDef* io_port, uint16_t io_pin):port(io_port), pin(io_pin){};
+	IOPin(GPIO_TypeDef* io_port, uint16_t io_pin) : port(io_port), pin(io_pin){};
 
 	inline void write(bool state) const{port->BSRR = pin << (state ? 0 : 16);}//HAL_GPIO_WritePin(port, pin, state ? GPIO_PIN_SET : GPIO_PIN_RESET);
 	inline bool read() const{return (port->IDR | pin) != 0;}//HAL_GPIO_ReadPin(port, pin) == GPIO_PIN_SET;

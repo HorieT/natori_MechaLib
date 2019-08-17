@@ -7,8 +7,6 @@
 #include "MechaLib/MechaLib_HAL_global.hpp"
 #include "MechaLib/chassis/chassis.hpp"
 #include "MechaLib/motor/motor.hpp"
-#include "MechaLib/posEstimation.hpp"
-#include "Eigen/Core"
 
 namespace Mecha{
 /*

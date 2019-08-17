@@ -16,4 +16,9 @@ public:
 	std::vector<float> length_mm;
 	float all_length_mm;
 };
+
+template<typename T>
+class routePoint : public coordinate<T>{
+
+};
 }

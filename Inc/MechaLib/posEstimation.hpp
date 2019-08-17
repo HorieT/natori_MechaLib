@@ -17,7 +17,7 @@ public:
 	const float _diameter;
 	coordinate<float> _position;
 
-	measurWheel(TIM_HandleTypeDef* tim, uint32_t resolution, float diameter_mm, coordinate<float> position):
+	measurWheel(TIM_HandleTypeDef* tim, uint32_t resolution, float diameter_mm, const coordinate<float>& position):
 	_htim(tim), _resolution(resolution), _diameter(diameter_mm), _position(position){}
 	virtual ~measurWheel(){HAL_TIM_Encoder_Stop(_htim, TIM_CHANNEL_ALL);}
 
@@ -77,7 +77,7 @@ public:
  */
 class SelfPos{
 private:
-	timeScheduler<SelfPos*> _scheduler;
+	timeScheduler<void> _scheduler;
 	multiAxisComboSensor* const _sensor;
 	std::array<measurWheel*, 2> _encoder;
 
@@ -96,9 +96,6 @@ private:
 	std::array<float, 2> _sin_encoder_rad;
 
 
-	static void scheduler_fanc(SelfPos* me){
-		me->calculation_pos();
-	}
 	/*
 	 *　位置計算
 	 */
@@ -146,7 +143,7 @@ public:
 	 * コンストラクタ
 	 */
 	SelfPos(multiAxisComboSensor* gyro, std::array<measurWheel*, 2> enc, uint32_t period, coordinate<float> start):
-	_scheduler(scheduler_fanc, period), _sensor(gyro), _initial_rad(start.direction_rad){
+	_scheduler([this]{calculation_pos();}, period), _sensor(gyro), _initial_rad(start.direction_rad){
 		_encoder.at(0)= enc.at(0);
 		_encoder.at(1)= enc.at(1);
 		_position = start;
@@ -162,7 +159,7 @@ public:
 		}
 	}
 	SelfPos(multiAxisComboSensor* gyro, measurWheel* enc1, measurWheel* enc2, uint32_t period, coordinate<float> start):
-		_scheduler(scheduler_fanc, period), _sensor(gyro), _initial_rad(start.direction_rad){
+		_scheduler([this]{calculation_pos();}, period), _sensor(gyro), _initial_rad(start.direction_rad){
 		_encoder.at(0)= enc1;
 		_encoder.at(1)= enc2;
 		_position = start;
@@ -185,7 +182,7 @@ public:
 	/*
 	 * 初期処理
 	 */
-	inline void init(){_scheduler.set(this);}
+	inline void init(){_scheduler.set();}
 
 
 	inline const coordinate<float>& get_pos(){return _position;}
