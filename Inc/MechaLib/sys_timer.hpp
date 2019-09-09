@@ -23,7 +23,7 @@ private:
 	static inline std::vector<std::shared_ptr<sysClock>> _scheduler;
 
 
-	inline static void inc_time(){_time++;}
+	static inline void inc_time(){_time++;}
 
 protected:
 	//一時オブジェクト用
@@ -50,6 +50,7 @@ public:
 	 * タイムスケジューラ消去
 	 */
 	virtual void erase() final{
+		if(!_setting)return;
 		for(auto it = _scheduler.begin(), e = _scheduler.end();it != e;++it){
 			if(*it == shared_from_this()){
 				_setting = false;
@@ -61,7 +62,7 @@ public:
 	/*
 	 * タイムスケジューラリセット
 	 */
-	virtual void reset() final{_start = _time;}
+	virtual inline void reset() final{_start = _time;}
 
 	/*
 	 * ゲッター
@@ -146,13 +147,12 @@ private:
 
 //遅延関数
 template<typename T>
-inline void sys_delayCall(std::function<void(T)>&& callback, T arg, uint32_t ms){
+inline void sys_delay_call(std::function<void(T)>&& callback, T arg, uint32_t ms){
 	typename timeScheduler<T>::timeScheduler(std::move(callback), ms).set(arg);
 }
-inline void sys_delayCall(std::function<void(void)>&& callback, uint32_t ms){
+inline void sys_delay_call(std::function<void(void)>&& callback, uint32_t ms){
 	typename timeScheduler<void>::timeScheduler(std::move(callback), ms).set();
 }
-
 }
 
 

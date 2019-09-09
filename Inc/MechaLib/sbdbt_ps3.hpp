@@ -60,7 +60,7 @@ private:
 				data = (num == 0)? 0x80 : ((num < 3 || num == 7) ? 0 : ANAROG_CENTER);
 				++num;
 			}
-		}//for(uint8_t i = 0;i < buttonnData.size();i++)buttonnData.at(i) = 0;
+		}
 
 		_last_buttonn_data = _buttonn_data;
 		if(_timeout_callback != nullptr)_timeout_callback();
@@ -68,9 +68,9 @@ private:
 
 public:
 	/*アナログパッド座標値*/
-	static constexpr uint8_t USE_ANAROG_MAX =		63;
-	static constexpr uint8_t USE_ANAROG_MIN =		-63;
-	static constexpr uint8_t USE_ANAROG_CENTER =	0;
+	static constexpr int8_t USE_ANAROG_MAX =		63;
+	static constexpr int8_t USE_ANAROG_MIN =		-63;
+	static constexpr int8_t USE_ANAROG_CENTER =		0;
 
 	/*下位*/
 	static constexpr button PS3up =			0x0001;
@@ -106,7 +106,7 @@ public:
 		_schduler.set();
 	}
 
-	//PS3コントローラからの受信(※必ず HAL_UART_RxCpltCallback()内に記入すること)
+	//PS3コントローラからの受信(※必ず HAL_UART_RxHalfCpltCallback()内に記入すること)
 	bool receive(UART_HandleTypeDef *huart){
 		bool state = false;
 
@@ -131,19 +131,12 @@ public:
 					{
 						uint8_t i = 0;
 						for(auto& d : data){
-							d = hold_buff.at((j + i) & SBDBT_BUFF_SIZE_D);
+							d = hold_buff[(j + i) & SBDBT_BUFF_SIZE_D];
 							++i;
 						}
 					}
 
-					//チェックサム生成
-					/*
-					for(uint8_t i = 1;i < SBDBT_DATA_SIZE - 1;i++)
-						check_sum += data[i];
-						↓
-					 */
-					for(auto it = std::next(data.begin(), 1), e = std::next(data.end(), -1);it != e;++it)
-						check_sum = static_cast<uint8_t>(check_sum + *it);
+					check_sum = static_cast<uint8_t>(std::accumulate(std::next(data.begin(), 1), std::next(data.end(), -1), 0));
 
 					//チェックサム確認
 					if((check_sum &  0x7F) == (data.at(7) & 0x7F)){
@@ -153,10 +146,10 @@ public:
 							button edge_button =
 									(uint32_t)_buttonn_data.at(2) |
 									((uint32_t)_buttonn_data.at(1) << 8) |
-									((_buttonn_data.at(3) != _last_buttonn_data.at(3)) ? (0x0F << 16) : 0) |
-									((_buttonn_data.at(4) != _last_buttonn_data.at(4)) ? (0xF0 << 16) : 0) |
-									((_buttonn_data.at(5) != _last_buttonn_data.at(5)) ? (0x0F << 24) : 0) |
-									((_buttonn_data.at(6) != _last_buttonn_data.at(6)) ? (0xF0 << 24) : 0);
+									((_buttonn_data[3] != _last_buttonn_data[3]) ? (0x0F << 16) : 0) |
+									((_buttonn_data[4] != _last_buttonn_data[4]) ? (0xF0 << 16) : 0) |
+									((_buttonn_data[5] != _last_buttonn_data[5]) ? (0x0F << 24) : 0) |
+									((_buttonn_data[6] != _last_buttonn_data[6]) ? (0xF0 << 24) : 0);
 
 							_continue_flag = true;
 							_button_callback(edge_button);

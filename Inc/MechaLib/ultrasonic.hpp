@@ -35,7 +35,6 @@ private:
 	static constexpr float MAX = 38000.0f;
 
 	TIM_HandleTypeDef* const _tim;
-	//timeScheduler<ultrasonic*> _scheduler;
 
 	GPIO_TypeDef* const _gpio;
 	std::array<sensor, T> _line;

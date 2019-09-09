@@ -11,6 +11,7 @@
 #include <array>
 #include <iterator>
 #include <type_traits>
+#include <numeric>
 
 #include <Eigen/Core>
 /*

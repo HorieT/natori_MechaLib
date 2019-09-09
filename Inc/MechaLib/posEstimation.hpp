@@ -3,6 +3,7 @@
  */
 #pragma once
 
+#include <any>
 #include "MechaLib_HAL_global.hpp"
 
 namespace Mecha{
@@ -65,6 +66,9 @@ public:
 		_global_data_acceleration(0.0f, 0.0f, 0.0f),
 		_global_data_rot_position(0.0f, 0.0f, 0.0f){}
 	virtual ~multiAxisComboSensor(){}
+
+	virtual void init() = 0;
+	virtual bool receive(std::any com_object) = 0;
 
 	const Eigen::Vector3f& get_acc_data() const{return _global_data_acceleration;}
 	const Eigen::Vector3f& get_rot_vel_data() const{return _global_data_rot_velocity;}
@@ -185,8 +189,8 @@ public:
 	inline void init(){_scheduler.set();}
 
 
-	inline const coordinate<float>& get_pos(){return _position;}
-	inline const coordinate<float>& get_vel(){return _velocity;}
+	inline const coordinate<float>& get_pos() const {return _position;}
+	inline const coordinate<float>& get_vel() const {return _velocity;}
 
 	/*
 	 * à íuçƒë„ì¸

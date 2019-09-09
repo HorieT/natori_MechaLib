@@ -13,6 +13,7 @@ private:
 	static constexpr uint8_t GYRO_DATA_SIZE = 15;
 	static constexpr uint8_t GYRO_BUFF_SIZE = GYRO_DATA_SIZE * 2;
 	static constexpr uint8_t GYRO_BUFF_SIZE_D = GYRO_BUFF_SIZE - 1;
+	static constexpr uint32_t TIMEOUT_TIME = 25;
 
 	timeScheduler<void> _scheduler;
 	std::array<uint8_t, GYRO_BUFF_SIZE> _buff;
@@ -26,36 +27,43 @@ private:
 		_global_data_rot_position = {0.0f, 0.0f, 0.0f};
 	}
 public:
-	R1370P(UART_HandleTypeDef* uart) : _scheduler([this]{timeout_func();}, 25), _huart(uart){}
+	R1370P(UART_HandleTypeDef* uart) : _scheduler([this]{timeout_func();}, TIMEOUT_TIME), _huart(uart){}
 	~R1370P(){_scheduler.erase();}
 
-	void init(){
+	virtual void init() final{
 		HAL_UART_Receive_DMA(_huart, _buff.data(), GYRO_BUFF_SIZE);
 		_scheduler.set();
 	}
-	bool receive(UART_HandleTypeDef* uart){
-		bool state = false;
+	/*Å@	éÛêMä÷êî
+	 *  HAL_UART_RxHalfCpltCallback()Ç≈åƒÇ—èoÇ∑
+	 */
+	virtual bool receive(std::any uart_handle) final{
+		UART_HandleTypeDef* uart;
+
+		uart = std::any_cast<UART_HandleTypeDef*>(uart_handle);
+		/*
+		try{
+			uart = std::any_cast<UART_HandleTypeDef*>(uart_handle);
+		}catch (std::bad_any_cast& e) {
+			return false;
+		}*/
+
 		if(uart == _huart){
-			std::array<uint8_t, GYRO_BUFF_SIZE> hold_buff(_buff);
+			std::array<uint8_t, GYRO_BUFF_SIZE> tmp_buff(_buff);
 			uint32_t ndtr_ptr = _huart->hdmarx->Instance->NDTR;
 
 			for(uint8_t j = 0;j < GYRO_BUFF_SIZE;++j){
-				if((hold_buff[j] == 0xAA) &&
-						(hold_buff[(j + 1) % GYRO_BUFF_SIZE] == 0x00) &&
+				if((tmp_buff[j] == 0xAA) &&
+						(tmp_buff[(j + 1) % GYRO_BUFF_SIZE] == 0x00) &&
 						(((j + ndtr_ptr) % GYRO_BUFF_SIZE) < GYRO_DATA_SIZE)){
 					std::array<uint8_t, GYRO_DATA_SIZE> read_data;
 					uint8_t check_sum = 0;
 
 					for(uint8_t i = 0;i < GYRO_DATA_SIZE - 2;i++)
-						read_data[i] = hold_buff[(j + i + 2) % GYRO_BUFF_SIZE];
+						read_data[i] = tmp_buff[(j + i + 2) % GYRO_BUFF_SIZE];
 
-					/*
-					for(uint8_t i = 0;i < GYRO_DATA_SIZE - 3;i++)
-						check_sum = static_cast<uint8_t>(check_sum + read_data[i]);
-						Å´
-					*/
-					for(auto it = std::next(read_data.begin(), 1), e = std::next(read_data.end(), -3);it != e;++it)
-						check_sum = static_cast<uint8_t>(check_sum + *it);
+					check_sum = static_cast<uint8_t>(std::accumulate(std::next(read_data.begin(), 1), std::next(read_data.end(), -3), 0));
+
 					if(read_data[12] == check_sum){
 						_scheduler.reset();
 						int16_t angle, angle_vel, acc;
@@ -70,13 +78,12 @@ public:
 						_sensor_data_acceleration.y() = static_cast<float>(acc);
 						memcpy(&acc, &read_data[9], 2);
 						_sensor_data_acceleration.z() = static_cast<float>(acc);
-						state = true;
-						break;
+						return true;
 					}
 				}
 			}
 		}
-		return state;
+		return false;
 	}
 };
 }

@@ -112,8 +112,8 @@ public:
 	virtual void set_PID (float p_gain, float i_gain, float d_gain) override{
 		float p = p_gain, i = i_gain, d = d_gain;
 		write_data(md_address::WRITE_P_GAIN, &p);
-		sys_delayCall([this, &i]{write_data(md_address::WRITE_I_GAIN, &i);}, 10);
-		sys_delayCall([this, &d]{write_data(md_address::WRITE_D_GAIN, &d);}, 20);
+		sys_delay_call([this, &i]{write_data(md_address::WRITE_I_GAIN, &i);}, 10);
+		sys_delay_call([this, &d]{write_data(md_address::WRITE_D_GAIN, &d);}, 20);
 		/*sysClock::sys_delay(10);
 		write_data(md_address::WRITE_I_GAIN, &i);
 		sysClock::sys_delay(10);
